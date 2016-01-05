@@ -4,7 +4,6 @@ namespace Chrisbjr\ApiGuard\Http\Middleware;
 
 use App;
 use Chrisbjr\ApiGuard\Repositories\ApiKeyRepository;
-use Chrisbjr\ApiGuard\Repositories\ApiLogRepository;
 use Closure;
 use Config;
 use EllipseSynergie\ApiResponse\Laravel\Response;
@@ -22,12 +21,6 @@ class ApiGuardMiddleware
      */
     public $apiKey = null;
 
-
-    /**
-     * @var ApiLogRepository
-     */
-    public $apiLog = null;
-
     /**
      * @var Response
      */
@@ -41,16 +34,15 @@ class ApiGuardMiddleware
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
+     * @param  \Illuminate\Http\Request $request
+     * @param  \Closure $next
+     *
      * @return mixed
      */
     public function handle($request, Closure $next)
     {
         // Let's instantiate the response class first
         $this->manager = new Manager;
-
-        $this->manager->parseIncludes(Input::get(Config::get('apiguard.includeKeyword', 'include'), 'include'));
 
         $this->response = new Response($this->manager);
 
@@ -92,10 +84,9 @@ class ApiGuardMiddleware
 
             $apiKeyModel = App::make(Config::get('apiguard.model', 'Chrisbjr\ApiGuard\Models\ApiKey'));
 
-            if ( ! $apiKeyModel instanceof ApiKeyRepository) {
+            if ( !$apiKeyModel instanceof ApiKeyRepository) {
                 Log::error('[Chrisbjr/ApiGuard] You ApiKey model should be an instance of ApiKeyRepository.');
-                $exception = new Exception("You ApiKey model should be an instance of ApiKeyRepository.");
-                throw($exception);
+                throw new Exception("You ApiKey model should be an instance of ApiKeyRepository.");
             }
 
             $this->apiKey = $apiKeyModel->getByKey($key);
@@ -110,32 +101,6 @@ class ApiGuardMiddleware
                 if ($this->apiKey->level < $apiMethods[$method]['level']) {
                     return $this->response->errorForbidden();
                 }
-            }
-        }
-
-        // End of cheking limits
-        if (Config::get('apiguard.logging', true)) {
-            // Default to log requests from this action
-            $logged = true;
-
-            if (isset($apiMethods[$method]['logged']) && $apiMethods[$method]['logged'] === false) {
-                $logged = false;
-            }
-
-            if ($logged) {
-                // Log this API request
-                $this->apiLog = App::make(Config::get('apiguard.apiLogModel', 'Chrisbjr\ApiGuard\Models\ApiLog'));
-
-                if (isset($this->apiKey)) {
-                    $this->apiLog->api_key_id = $this->apiKey->id;
-                }
-
-                $this->apiLog->route      = Route::currentRouteAction();
-                $this->apiLog->method     = $request->getMethod();
-                $this->apiLog->params     = http_build_query(Input::all());
-                $this->apiLog->ip_address = $request->getClientIp();
-                $this->apiLog->save();
-
             }
         }
 
