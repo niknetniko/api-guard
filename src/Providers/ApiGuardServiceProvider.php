@@ -12,8 +12,6 @@ class ApiGuardServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        $this->app->register('EllipseSynergie\ApiResponse\Laravel\ResponseServiceProvider');
-
         $this->commands([
             'Chrisbjr\ApiGuard\Console\Commands\GenerateApiKeyCommand',
             'Chrisbjr\ApiGuard\Console\Commands\DeleteApiKeyCommand',
